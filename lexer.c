@@ -205,6 +205,7 @@ token getToken(char ** codePtr){
         else if(c == ':'){
           state = 39;
         }
+
         else{
           //printf("Error: Unrecognized token\n");
           return token;
@@ -351,9 +352,7 @@ token getToken(char ** codePtr){
           state = 28;
         }
         else{
-          current--;
-          token.atribute = slashsym;
-          found = 1;
+          state = 30;
         }
         break;
 
@@ -370,11 +369,6 @@ token getToken(char ** codePtr){
 
       case 27: // end of comment
         current;//  needed so compiler doesnt freak out
-        // cut out comment from code
-        /*codeNew = calloc(1, codeLen-current+1); // need to free?
-        memmove(codeNew, (*codePtr)+current, codeLen - (current-1));
-        *codePtr = codeNew;
-        */
 
         chopFront(*codePtr , codeLen, current);
 
@@ -382,17 +376,82 @@ token getToken(char ** codePtr){
         return getToken(codePtr);
 
       case 28: // multi line comment
+        while(!(c=(*codePtr)[current++] /*== '\0' || c*/ == '*' )){
+          // ignore the comment
+        }
 
-      while(!(c=(*codePtr)[current++] /*== '\0' || c*/ == '*' )){
-        // ignore the comment
-      }
+        // '*' reached
+        state = 29;
 
-      // '*' reached
-      state = 29;
+      case 29: // * encountered in multi line comment
+        c = (*codePtr)[current++];
+
+        if(c == '/'){
+          state = 27;
+        }
+        else{
+          state = 28;
+        }
+        break;
+
+      case 30: // / folowed by not / or *
+        current--;
+        token.atribute = slashsym;
+        found = 1;
+        break;
+
+      case 31: // +
+        token.atribute = plussym ;
+        found = 1;
+        break;
+
+      case 32: // -
+        token.atribute = minussym;
+        found = 1;
+        break;
+
+      case 33: // *
+        token.atribute = multsym ;
+        found = 1;
+        break;
+
+      case 34: // (
+        token.atribute = lparentsym;
+        found = 1;
+        break;
+
+      case 35: // )
+        token.atribute = rparentsym;
+        found = 1;
+        break;
+
+      case 36: // ,
+        token.atribute = commasym ;
+        found = 1;
+        break;
+
+      case 37: // ;
+        token.atribute = semicolonsym;
+        found = 1;
+        break;
+      case 38: // .
+        token.atribute = periodsym;
+        found = 1;
+        break;
+
+      case 39:// :
+        c=(*codePtr)[current++];
+        if (c=='='){
+          state = 40;
+        }
+        else{
+          printf("Error: Invalid token");
+          return token;
+        }
+        break;
 
 
     }
-
   }
 
   // token found
