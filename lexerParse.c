@@ -29,10 +29,6 @@ To-Do
 #define MAX_NUM_LEN 5
 #define MAX_IDENTIFIER_LEN 11
 
-#define OK 0
-#define ERROR -1
-#define END 1
-
 typedef enum {
 nulsym = 1, identsym, numbersym, plussym, minussym,
 multsym, slashsym, oddsym, eqsym, neqsym,
@@ -47,29 +43,18 @@ typedef struct token{
   int atribute;
 }token;
 
-typedef struct node{
-  struct node *prev;
-  struct node *next;
-  token token;
-}node;
-
 // signitures
+void block(char ** codePtr, token * tokenPtr);
 void chopFront(char *src,int len, int n);
-void destroyLL(node *head, node *tail);
-void enqueue(node *ll, node *tail, token t);
 char * fileToStr(char * fName);
-int getToken(char ** codePtr, token *ret);
-void initLL(node ** inHead, node ** inTail);
-node * makeLexTable(char * code);
-void printLexTable(node * head);
-void printLexList(node * head);
-
+token getToken(char ** codePtr);
+void program(char * code);
 
 int main(int argc, char** argv){
 
   if(argc != 2){
     printf("Usage: ./lex <PM0 source file>\n" );
-    return ERROR;
+    return -1;
   }
 
   // read file into a string
@@ -79,17 +64,48 @@ int main(int argc, char** argv){
   printf("%s\n", code);
 
   // build Lexeme table and Lexeme list
-  node * lexTable = makeLexTable(code);
+  program(code);
 
-  if(lexTable != NULL){
-    printLexTable(lexTable);
-    //printLexList(lexTable);
-    //destroyLL(lexTable);
-  }
-  // dealocate memory
   free(code);
 
+}
 
+
+void block(char ** codePtr, token * tokenPtr){
+  if ((*tokenPtr).text == "const"){
+    constDecl(codePtr, tokenPtr);
+  }
+  if((*tokenPtr).text == "var"){
+    varDecl(codePtr,tokenPtr);
+  }
+  if((*tokenPtr).text =="procedure"){
+    procDecl(codePtr,tokenPtr);
+  }
+  statement(codePtr,tokenPtr)
+}
+
+void constDecl(char ** codePtr, token * tokenPtr){
+  do{
+    getToken(codePtr, tokenPtr);
+    if((*tokenPtr) != identsym){
+      printf("Error: missing identifier");// dont know what to do here
+      return;
+    }
+    getToken(codePtr, tokenPtr);
+    if((*tokenPtr) != eqlsym){
+      printf("Error: Identifier should be followed by =");
+      return;
+    }
+    getToken(codePtr, tokenPtr);
+    if((*tokenPtr) != numbersym){
+      printf("Error: = should be followed by number");
+      return;
+    }
+    enter();
+
+
+
+  }while(token.atribute == commasym);
 }
 
 /**
@@ -112,22 +128,6 @@ void chopFront(char *src,int len, int n){
 
 }
 
-
-/**
-
-adds items to back of linked list
-*/
-void enqueue(node *ll, node *tail, token t){
-  node * newNode = calloc(1, sizeof(node));
-
-  newNode->token = t;
-  newNode->next = tail;
-  newNode->prev = tail->prev;
-
-  tail->prev->next = newNode;
-  tail->prev=newNode;
-
-}
 
 /**
 method to read whole input file into buffer
@@ -165,13 +165,11 @@ char * fileToStr(char * fName){
 }
 
 /*
-find the next lexem, puts it in ret, and removes it from code
+returns the next token and removes it from code
 
 used pages 131 to 135 in compilers book
-
-returns 0 on ok and -1 on error
 */
-int getToken(char ** codePtr, token * ret){
+token getToken(char ** codePtr){
   // the crux, might have tot make a custom tokenizer
   int start = 0;
   int current = 0;
@@ -239,13 +237,10 @@ int getToken(char ** codePtr, token * ret){
         else if(c == ':'){
           state = 39;
         }
-        else if(c == '\0'){
-          // end of file reached
-          return END;
-        }
+
         else{
-          printf("Error: Unrecognized token\n");
-          return ERROR;
+          //printf("Error: Unrecognized token\n");
+          return token;
         }
 
 
@@ -297,8 +292,8 @@ int getToken(char ** codePtr, token * ret){
 
         if (tokenLen > MAX_IDENTIFIER_LEN){
           // error
-          printf("Error: Identifier too long.\n");
-          return ERROR;
+          printf("Error: Identifier too long.");
+          return token;
         }
 
         c = (*codePtr)[current++];
@@ -330,8 +325,8 @@ int getToken(char ** codePtr, token * ret){
 
         if(tokenLen > MAX_NUM_LEN){
           // error in input code
-          printf("Error: Number too large.\n");
-          return ERROR;
+          printf("Error: Number too large.");
+          return token;
         }
 
         c = (*codePtr)[current++];
@@ -347,7 +342,7 @@ int getToken(char ** codePtr, token * ret){
 
       case 20: // number then something else
         // if its a space we are fine
-        if(isspace(c) || c == '\0' || c ==';'){
+        if(isspace(c)){
           current--;
           found = 1;
           token.atribute = numbersym;
@@ -355,10 +350,8 @@ int getToken(char ** codePtr, token * ret){
         }
         else{
           //
-          printf("Error: Invalid identifier.\n");
-          //debug
-          printf("c = %c",c);
-          return ERROR;
+          printf("Error: Invalid identifier.");
+          return token;
         }
 
       case 23: // whitespace
@@ -379,7 +372,7 @@ int getToken(char ** codePtr, token * ret){
         //debug
         //printf("%s\n", *codePtr);
 
-        return getToken(codePtr, ret);
+        return getToken(codePtr);
 
       case 25: // /
         c=(*codePtr)[current++];
@@ -412,7 +405,7 @@ int getToken(char ** codePtr, token * ret){
         chopFront(*codePtr , codeLen, current);
 
         // start from begining
-        return getToken(codePtr, ret);
+        return getToken(codePtr);
 
       case 28: // multi line comment
         while(!(c=(*codePtr)[current++] /*== '\0' || c*/ == '*' )){
@@ -484,8 +477,8 @@ int getToken(char ** codePtr, token * ret){
           state = 40;
         }
         else{
-          printf("Error: Invalid token\n");
-          return ERROR;
+          printf("Error: Invalid token");
+          return token;
         }
         break;
 
@@ -503,109 +496,70 @@ int getToken(char ** codePtr, token * ret){
   chopFront(*codePtr , codeLen, current);
 
   // if text check if reserved word
-  if(token.atribute == 0){
+  if(token.artibute == 0){
+    switch(token.text){
+      case "begin":
+        token.atribute=beginsym;
+        break;
+      case "end":
+        token.atribute = endsym;
+        break;
+      case "if":
+        token.atribute = ifsym;
+        break;
+      case "then":
+        token.atribute = thensym;
+        break;
+      case "while":
+        token.atribute = whilesym;
+        break;
+      case "do":
+        token.atribute = dosym;
+        break;
+      case "call":
+        token.atribute = callsym;
+        break;
+      case "const":
+        token.atribute = constsym;
+        break;
+      case "var":
+        token.atribute = varsym;
+        break;
+      case "procedure":
+        token.atribute = procsym;
+        break;
+      case "write":
+        token.atribute = writesym;
+        break;
+      case "read":
+        token.atribute = readsym;
+        break;
+      case "else":
+        token.atribute = elsesym;
+        break;
+      default:
+        token.atribute = identsym;
+        break;
+    }
 
-    if(strcmp(token.text,"begin") == 0){
-      token.atribute=beginsym;
-    }
-    else if(strcmp(token.text,"end") == 0){
-      token.atribute = endsym;
-    }
-    else if(strcmp(token.text,"if") == 0){
-      token.atribute = ifsym;
-    }
-    else if(strcmp(token.text,"then") == 0){
-      token.atribute = thensym;
-    }
-    else if(strcmp(token.text,"while") == 0){
-      token.atribute = whilesym;
-    }
-    else if(strcmp(token.text,"do") == 0){
-      token.atribute = dosym;
-    }
-    else if(strcmp(token.text,"call") == 0){
-      token.atribute = callsym;
-    }
-    else if(strcmp(token.text,"const") == 0){
-      token.atribute = constsym;
-    }
-    else if(strcmp(token.text,"var") == 0){
-      token.atribute = varsym;
-    }
-    else if(strcmp(token.text,"procedure") == 0){
-      token.atribute = procsym;
-    }
-    else if(strcmp(token.text,"write") == 0){
-      token.atribute = writesym;
-    }
-    else if(strcmp(token.text,"read") == 0){
-      token.atribute = readsym;
-    }
-    else if(strcmp(token.text,"else") == 0){
-      token.atribute = elsesym;
-    }
-    else{
-      token.atribute = identsym;
-    }
   }
-
-
 
   //free(codeNew);
-  *ret = token;
-  return OK;
+  return token;
 }
 
-void initLL(node ** inHead, node ** inTail){
-  node *head = calloc(1,sizeof(node));
-  node *tail = calloc(1,sizeof(node));
+void program(char * code){
+  token token = getToken(&code);
 
-  head->next = tail;
-  head->prev = NULL;
-  //head->token.text =""
-  tail->prev = head;
-  tail->next = NULL;
-  *inHead = head;
-  *inTail = tail;
-}
+  // debug
+  printf("%s, %d, %s\n", token.text, token.atribute, code);
 
-/*
-makes a dynamicly sized list
+  block(&code, &token);
 
-@returns status
-*/
-node * makeLexTable(char * code){
-  node * ll;
-  //node * head;
-  node * tail;
-  initLL(&ll,&tail);
-
-  token t;
-  int status;
-
-  status = getToken(&code,&t);
-  while(status == OK){
-
-    enqueue(ll,tail,t);
-    status = getToken(&code,&t);
+  if(token.text != "."){
+    // error
   }
 
-  if (status == END){
-    return ll;
-  }
-  else{
-    //destroyLL(lexTable);
-    return NULL;
-  }
-}
+  //free(code);
 
-void printLexTable(node * head){
-  fprintf(stdout, "\nLexeme Table:\n");
-  fprintf(stdout, "lexeme\t\ttoken type\n");
-  node *current =head->next;
-  while(current->next != NULL ){
-
-    fprintf(stdout, "%s\t\t%d\n", current->token.text, current->token.atribute);
-    current =current->next;
-  }
 }
