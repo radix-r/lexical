@@ -55,7 +55,7 @@ typedef struct node{
 
 // signitures
 void chopFront(char *src,int len, int n);
-void destroyLL(node *head, node *tail);
+void destroyLL(node *head);
 void enqueue(node *ll, node *tail, token t);
 char * fileToStr(char * fName);
 int getToken(char ** codePtr, token *ret);
@@ -74,6 +74,9 @@ int main(int argc, char** argv){
 
   // read file into a string
   char* code = fileToStr(argv[1]);
+  if(code == NULL){
+    return 0;
+  }
 
   fprintf(stdout, "Source Program:%s\n", argv[1]);
   printf("%s\n", code);
@@ -83,8 +86,8 @@ int main(int argc, char** argv){
 
   if(lexTable != NULL){
     printLexTable(lexTable);
-    //printLexList(lexTable);
-    //destroyLL(lexTable);
+    printLexList(lexTable);
+    destroyLL(lexTable);
   }
   // dealocate memory
   free(code);
@@ -112,6 +115,16 @@ void chopFront(char *src,int len, int n){
 
 }
 
+
+void destroyLL(node * head){
+  if (head -> next == NULL){
+    free(head);
+    return;
+
+  }
+  destroyLL(head->next);
+  free(head);
+}
 
 /**
 
@@ -244,7 +257,7 @@ int getToken(char ** codePtr, token * ret){
           return END;
         }
         else{
-          printf("Error: Unrecognized token\n");
+          printf("Error: Invalid symbol.");
           return ERROR;
         }
 
@@ -297,7 +310,7 @@ int getToken(char ** codePtr, token * ret){
 
         if (tokenLen > MAX_IDENTIFIER_LEN){
           // error
-          printf("Error: Identifier too long.\n");
+          printf("Error: Identifier too long.");
           return ERROR;
         }
 
@@ -330,7 +343,7 @@ int getToken(char ** codePtr, token * ret){
 
         if(tokenLen > MAX_NUM_LEN){
           // error in input code
-          printf("Error: Number too large.\n");
+          printf("Error: Number too large.");
           return ERROR;
         }
 
@@ -346,19 +359,17 @@ int getToken(char ** codePtr, token * ret){
         break;
 
       case 20: // number then something else
-        // if its a space we are fine
-        if(isspace(c) || c == '\0' || c ==';'){
+        // if its a not a letter we are fine
+        if((c >= 'a' && c <= 'z') || (c >='A' && c <='Z')){
+          //
+          printf("Error: Invalid identifier.");
+          return ERROR;
+        }
+        else{
           current--;
           found = 1;
           token.atribute = numbersym;
           break;
-        }
-        else{
-          //
-          printf("Error: Invalid identifier.\n");
-          //debug
-          printf("c = %c",c);
-          return ERROR;
         }
 
       case 23: // whitespace
@@ -396,9 +407,9 @@ int getToken(char ** codePtr, token * ret){
         break;
 
       case 26: // single line comment
-        while(!(c=(*codePtr)[current++] == '\0' || c == '\n' || c == '\r' )){
-          // ignore the comment
-        }
+        do{
+          c=(*codePtr)[current++];
+        }while(!(c == '\0' || c == '\n' || c == '\r' ));
         /*if(c == '\0' || c == '\001'){ // end of program reached
           found = 1;
           break;
@@ -484,7 +495,7 @@ int getToken(char ** codePtr, token * ret){
           state = 40;
         }
         else{
-          printf("Error: Invalid token\n");
+          printf("Error: Invalid token");
           return ERROR;
         }
         break;
@@ -594,7 +605,8 @@ node * makeLexTable(char * code){
     return ll;
   }
   else{
-    //destroyLL(lexTable);
+    //printf("Error: Invalid symbol");
+    destroyLL(ll);
     return NULL;
   }
 }
@@ -608,4 +620,23 @@ void printLexTable(node * head){
     fprintf(stdout, "%s\t\t%d\n", current->token.text, current->token.atribute);
     current =current->next;
   }
+}
+
+void printLexList(node * head){
+  fprintf(stdout, "\nLexeme List:\n");
+  node *current =head->next;
+  while(current->next != NULL ){
+    fprintf(stdout, "%d ", current->token.atribute);
+    // If an identifier, print variable name
+    if(current->token.atribute == 2){
+      fprintf(stdout, "%s ", current->token.text);
+    }
+    // If number, print its ascii number value
+    else if(current->token.atribute == 3){
+      fprintf(stdout, "%s ", current->token.text);
+    }
+    current= current -> next;
+  }
+  printf("\n");
+
 }
