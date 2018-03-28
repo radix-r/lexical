@@ -60,7 +60,7 @@ void enqueue(node *ll, node *tail, token t);
 char * fileToStr(char * fName);
 int getToken(char ** codePtr, token *ret);
 void initLL(node ** inHead, node ** inTail);
-node * makeLexTable(char * code);
+node * makeLexTable(char ** codePtr);
 void printLexTable(node * head);
 void printLexList(node * head);
 
@@ -73,7 +73,8 @@ int main(int argc, char** argv){
   }
 
   // read file into a string
-  char* code = fileToStr(argv[1]);
+  char* code = NULL;
+  code = fileToStr(argv[1]);
   if(code == NULL){
     return 0;
   }
@@ -82,7 +83,8 @@ int main(int argc, char** argv){
   printf("%s\n", code);
 
   // build Lexeme table and Lexeme list
-  node * lexTable = makeLexTable(code);
+  node * lexTable = NULL;
+  lexTable = makeLexTable(&code);
 
   if(lexTable != NULL){
     printLexTable(lexTable);
@@ -375,7 +377,7 @@ int getToken(char ** codePtr, token * ret){
       case 23: // whitespace
 
         // consume whitespace
-        while(isspace(*codePtr[current++])){
+        while(isspace((*codePtr)[current++])){
           // eat em up
         }
 
@@ -585,7 +587,7 @@ makes a dynamicly sized list
 
 @returns status
 */
-node * makeLexTable(char * code){
+node * makeLexTable(char ** codePtr){
   node * ll;
   //node * head;
   node * tail;
@@ -594,11 +596,11 @@ node * makeLexTable(char * code){
   token t;
   int status;
 
-  status = getToken(&code,&t);
+  status = getToken(codePtr,&t);
   while(status == OK){
 
     enqueue(ll,tail,t);
-    status = getToken(&code,&t);
+    status = getToken(codePtr,&t);
   }
 
   if (status == END){

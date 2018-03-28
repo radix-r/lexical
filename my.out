@@ -1,24 +1,7 @@
-Source Program:trkTestIn.txt
-//Tricky Test
-//This test attempts to test whether or not the Lexical Analyzer
-//treats tricky cases correctly.
+Source Program:err4In.txt
+//Error #4
+//Invalid Symbols
 
-,.
+$ # & ! _ ~ ` ? 
 
-x:=y;
-
-varx
-
-
-Lexeme Table:
-lexeme		token type
-,		17
-.		19
-x		2
-:=		20
-y		2
-;		18
-varx		2
-
-Lexeme List:
-17 19 2 x 20 2 y 18 2 varx 
+Error: Invalid symbol.
